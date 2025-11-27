@@ -23,7 +23,7 @@ import sys
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-gitlab_user_api = "https://gitlab.suse.de/api/v4/users/"
+gitlab_user_api = 'https://gitlab.suse.de/api/v4/users/'
 git_fetch_depth = int(2)
 
 
@@ -37,10 +37,11 @@ class GitLabGPGKeyFetcher:
         user_api_url (str): Service provider (such as GitLab) API endpoint for fetching user information.
         private_token (str): Service provider (such as GitLab) private token for API authentication.
     """
+
     def __init__(self, user_email=None, user_api_url=None, private_token=None):
         self.private_token = private_token or os.environ.get('PRIVATE_TOKEN')
         if not self.private_token:
-            err_msg = "Please set the environment variable PRIVATE_TOKEN for GitLab User API Authentication"
+            err_msg = 'Please set the environment variable PRIVATE_TOKEN for GitLab User API Authentication'
             logger.error(err_msg)
             sys.exit(err_msg)
 
@@ -51,7 +52,7 @@ class GitLabGPGKeyFetcher:
         self.user_email = user_email
 
     def get_gpg_key_by_uid(self, uid=None):
-        """Fetches the GPG public key for a given GitLab user ID."""
+        """Fetch the GPG public key for a given GitLab user ID."""
         gpg_key = None
         if uid is not None:
             try:
@@ -72,27 +73,37 @@ class GitLabGPGKeyFetcher:
         if email is None and self.user_email is not None:
             email = self.user_email
 
-        logger.debug("Email: %s", email)
+        logger.debug('Email: %s', email)
         if email is not None:
-            response = requests.get(url=self.user_api_url+"?search="+str(email),
-                                headers={"PRIVATE-TOKEN": self.private_token})
-            if response.status_code == 200 and len(response.json()) != 0:
-                for index in range(0, len(response.json())):
-                    uid.append(response.json()[index].get('id'))
+            try:
+                response = requests.get(url=self.user_api_url + '?search=' + str(email),
+                                        headers={'PRIVATE-TOKEN': self.private_token})
+                if response.status_code == 200 and len(response.json()) != 0:
+                    for index in range(0, len(response.json())):
+                        uid.append(response.json()[index].get('id'))
+            except requests.exceptions.HTTPError as e:
+                logger.error(f'HTTP Error: {e}')
+            except requests.exceptions.RequestException as e:
+                logger.error(f'An error occurred: {e}')
         return uid
 
     def fetch_user_uid_by_name(self, name=None):
-        """Fetches UIDs by name, derived from email if name is None."""
+        """Fetch UIDs by name, derived from email if name is None."""
         uid = []
         if name is None and self.user_email is not None:
             name = self.user_email.split('@')[0]
-        logger.debug("Name: %s", name)
+        logger.debug('Name: %s', name)
         if name is not None:
-            response = requests.get(url=self.user_api_url+"?search=" + str(name),
-                                headers={"PRIVATE-TOKEN": self.private_token})
-            if response.status_code == 200 and len(response.json()) != 0:
-                for index in range(0, len(response.json())):
-                    uid.append(response.json()[index].get('id'))
+            try:
+                response = requests.get(url=self.user_api_url + '?search=' + str(name),
+                                        headers={'PRIVATE-TOKEN': self.private_token})
+                if response.status_code == 200 and len(response.json()) != 0:
+                    for index in range(0, len(response.json())):
+                        uid.append(response.json()[index].get('id'))
+            except requests.exceptions.HTTPError as e:
+                logger.error(f'HTTP Error: {e}')
+            except requests.exceptions.RequestException as e:
+                logger.error(f'An error occurred: {e}')
         return uid
 
 
@@ -106,6 +117,7 @@ class CheckoutVerifiedCommit:
         repo_url (str): Git Repository URL.
         fetch_depth (int): Initial Value to provide for fetching number of commits from Git Repository.
     """
+
     def __init__(self, target_dir=None, repo_url=None, fetch_depth=2):
         self.fetch_depth = fetch_depth
         self.path_to_checkout_dir = target_dir
@@ -115,7 +127,7 @@ class CheckoutVerifiedCommit:
         self.repo_instance = None
 
     def create_checkout_dir(self):
-        """Creates the target directory if it doesn't exist."""
+        """Create the target directory if it doesn't exist."""
         dir_path = self.path_to_checkout_dir
         if self.path_to_checkout_dir is not None:
             try:
@@ -126,7 +138,7 @@ class CheckoutVerifiedCommit:
         return dir_path
 
     def init_or_load_repo(self):
-        """Initializes a new repo or loads an existing one."""
+        """Initialize a new repo or loads an existing one."""
         path = str(self.path_to_checkout_dir) + '/.git'
         if not Path(path).exists() or not Path(path).is_dir():
             if self.repository_url is None:
@@ -144,7 +156,7 @@ class CheckoutVerifiedCommit:
 
     def fetch_git_repo(self, depth_val=2):
         """
-        Fetches the remote repository with specified depth.
+        Fetch the remote repository with specified depth.
         Returns True if new commits were fetched, False otherwise.
         """
         if self.repo_instance is not None:
@@ -158,7 +170,7 @@ class CheckoutVerifiedCommit:
             return fetcher_info[2]
 
     def get_default_remote_branch(self):
-        """Determines the default branch name from the remote 'origin'."""
+        """Determine the default branch name from the remote 'origin'."""
         default_branch = None
         if self.repo_instance is not None:
             head_branch = self.repo_instance.git.remote('show', 'origin')
@@ -169,7 +181,7 @@ class CheckoutVerifiedCommit:
         return default_branch
 
     def get_commiter_email(self, git_branch=None):
-        """Gets unique committer emails for a given branch ref, filtered by 'suse' committer."""
+        """Get unique committer emails for a given branch ref, filtered by 'suse' committer."""
         emails = []
         if git_branch is not None:
             ref_name = 'origin/' + str(git_branch)
@@ -183,9 +195,7 @@ class CheckoutVerifiedCommit:
         return sorted(set(emails))
 
     def get_signed_commit_sha(self, git_branch=None):
-        """
-        Searches the git log for the most recent commit with a Good (G) or Unknown (U) GPG signature.
-        """
+        """Search the git log for the most recent commit with a Good (G) or Unknown (U) GPG signature."""
         commit_sha = None
         ref_name = 'origin/' + str(git_branch)
         if self.repo_instance is not None:
