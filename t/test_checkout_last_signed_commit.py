@@ -6,7 +6,7 @@ def test_git_lab_gpg_key_fetcher_uninitialized(monkeypatch):
     with pytest.raises(SystemExit) as exc_info:
         gpg_key_fetcher = checkout_last_signed_commit.GitLabGPGKeyFetcher()
     assert exc_info.type == SystemExit
-    assert exc_info.value.code == 'Please set the environment variable PRIVATE_TOKEN fot GitLab User API Authentication'
+    assert exc_info.value.code == 'Please set the environment variable PRIVATE_TOKEN for GitLab User API Authentication'
 
     monkeypatch.setenv('PRIVATE_TOKEN', 'my_temporary_value')
     gpg_key_fetcher = checkout_last_signed_commit.GitLabGPGKeyFetcher()
@@ -28,7 +28,7 @@ def test_checkout_verified_commit_uninitialized():
     assert commit_checker.create_checkout_dir() == commit_checker.path_to_checkout_dir
 
     with pytest.raises(SystemExit) as exc_info:
-        commit_checker.init_get_repo()
+        commit_checker.init_or_load_repo()
     assert exc_info.type == SystemExit
     assert exc_info.value.code == f'No previous git checkout at {commit_checker.path_to_checkout_dir} and no URL provided'
     assert commit_checker.get_default_remote_branch() is None
