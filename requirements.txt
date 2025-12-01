@@ -1,5 +1,6 @@
 GitPython~=3.1.44
 Requests~=2.32.3
-pytest~=8.3.5
-python-gnupg~=0.5.4
+pytest~=9.0.1
+pytest-cov~=7.0.0
+python-gnupg~=0.5.5
 pathlib~=1.0.1
