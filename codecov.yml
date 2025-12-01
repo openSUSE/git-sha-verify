@@ -1,0 +1,22 @@
+codecov:
+  branch: main
+comment:
+  behavior: default
+  require_changes: true
+coverage:
+  range: 70..100
+  status:
+    changes: false
+    project:
+      default:
+        target: 90.0
+        threshold: 0
+      fully_covered:
+        target: 100.0
+        paths:
+          - checkout_last_signed_commit.py
+          - t/
+    patch:
+      default:
+        target: 100.0
+        branches: null
