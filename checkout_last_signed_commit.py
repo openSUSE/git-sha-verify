@@ -23,8 +23,9 @@ import sys
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-gitlab_user_api = 'https://gitlab.suse.de/api/v4/users/'
-git_fetch_depth = int(2)
+GITLAB_USER_API_DEFAULT = 'https://gitlab.suse.de/api/v4/users/'
+INITIAL_GIT_FETCH_DEPTH = int(2)
+FETCH_NO_NEW_COMMITS_REGEX = 'remote:.*Total 0 .*'
 
 
 class GitLabGPGKeyFetcher:
@@ -38,7 +39,7 @@ class GitLabGPGKeyFetcher:
         private_token (str): Service provider (such as GitLab) private token for API authentication.
     """
 
-    def __init__(self, user_email=None, user_api_url=None, private_token=None):
+    def __init__(self, user_email=None, user_api_url=None, private_token=None) -> None:
         self.private_token = private_token or os.environ.get('PRIVATE_TOKEN')
         if not self.private_token:
             err_msg = 'Please set the environment variable PRIVATE_TOKEN for GitLab User API Authentication'
@@ -46,12 +47,12 @@ class GitLabGPGKeyFetcher:
             sys.exit(err_msg)
 
         if user_api_url is None:
-            self.user_api_url = gitlab_user_api
+            self.user_api_url = GITLAB_USER_API_DEFAULT
         else:
             self.user_api_url = user_api_url
         self.user_email = user_email
 
-    def get_gpg_key_by_uid(self, uid=None):
+    def get_gpg_key_by_uid(self, uid=None) -> str | None:
         """Fetch the GPG public key for a given GitLab user ID."""
         gpg_key = None
         if uid is not None:
@@ -67,47 +68,53 @@ class GitLabGPGKeyFetcher:
                 logger.error(f'An error occurred: {e}')
         return gpg_key
 
-    def fetch_user_uid_by_email(self, email=None):
-        """Alias for fetching UIDs by email search term."""
-        uid = []
-        if email is None and self.user_email is not None:
-            email = self.user_email
+    def fetch_user_uid(self, email: str | None = None) -> list[int]:
+        """Return a list of user IDs matching a given email (or self.user_email)."""
+        email = email or self.user_email
+        if not email:
+            return []
 
-        logger.debug('Email: %s', email)
-        if email is not None:
-            try:
-                response = requests.get(url=self.user_api_url + '?search=' + str(email),
-                                        headers={'PRIVATE-TOKEN': self.private_token})
-                if response.status_code == 200 and len(response.json()) != 0:
-                    for index in range(0, len(response.json())):
-                        uid.append(response.json()[index].get('id'))
-            except requests.exceptions.HTTPError as e:
-                logger.error(f'HTTP Error: {e}')
-            except requests.exceptions.RequestException as e:
-                logger.error(f'An error occurred: {e}')
-        return uid
+        logger.debug('Looking up UID by email: %s', email)
+        singular_ids = self._search_user_ids(term=email)
+        if not singular_ids:
+            base_name = email.split('@')[0].split('.')[0]
+            singular_ids = self._fetch_user_uid_by_name(base_name)
+            logger.debug('UIDs by derived name %s: %s', base_name, singular_ids)
 
-    def fetch_user_uid_by_name(self, name=None):
-        """Fetch UIDs by name, derived from email if name is None."""
-        uid = []
-        if name is None and self.user_email is not None:
+        return singular_ids
+
+    def _fetch_user_uid_by_name(self, name: str | None = None) -> list[int]:
+        """
+        Return a list of user IDs matching a given name.
+        If name is None and user_email is set, use the local-part of the email.
+        """
+        if name is None and self.user_email:
             name = self.user_email.split('@')[0]
-        logger.debug('Name: %s', name)
-        if name is not None:
-            try:
-                response = requests.get(url=self.user_api_url + '?search=' + str(name),
-                                        headers={'PRIVATE-TOKEN': self.private_token})
-                if response.status_code == 200 and len(response.json()) != 0:
-                    for index in range(0, len(response.json())):
-                        uid.append(response.json()[index].get('id'))
-            except requests.exceptions.HTTPError as e:
-                logger.error(f'HTTP Error: {e}')
-            except requests.exceptions.RequestException as e:
-                logger.error(f'An error occurred: {e}')
-        return uid
+        logger.debug('Looking up UID by name: %s', name)
+        if not name:
+            return []
+
+        return self._search_user_ids(term=name)
+
+    # --------- internal helpers --------- #
+    def _search_user_ids(self, term: str) -> list[int]:
+        """Search GitLab users by term and return a list of IDs."""
+        try:
+            response = requests.get(
+                url=f'{self.user_api_url}?search={term}',
+                headers={'PRIVATE-TOKEN': self.private_token},
+                timeout=10,
+            )
+            response.raise_for_status()
+        except requests.exceptions.RequestException as exc:
+            logger.error('Failed searching GitLab users for term=%s: %s', term, exc)
+            return []
+
+        data = response.json()
+        return [entry.get('id') for entry in data or []]
 
 
-class CheckoutVerifiedCommit:
+class GitCheckVerifiedCommit:
     """
     Checking out verified commit class functionalities to check GPG commit signature before
     checking out the git commit.
@@ -206,21 +213,35 @@ class CheckoutVerifiedCommit:
         return commit_sha
 
 
-def main():
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description='Checkout latest GPG-signed commit from a git repository',
+    )
+    parser.add_argument(
+        '-t',
+        '--target_dir',
+        required=True,
+        help='Path to existing git dir or new checkout dir',
+    )
+    parser.add_argument(
+        '-u',
+        '--url',
+        required=True,
+        help='Remote URL of git repository ending with .git',
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> None:
     unique_ids = []
     signed_commit_sha = None
     default_remote_branch = None
     gpg_keys_imported = []
-    global git_fetch_depth
-    fetch_regex = 'remote:.*Total 0 .*'
+    global INITIAL_GIT_FETCH_DEPTH
 
-    arg_parser = argparse.ArgumentParser(description='Checkout Latest Signed Commit inside a git repository')
-    arg_parser.add_argument('-t', '--target_dir', help='Path to existing git dir or new checkout dir', required=True)
-    arg_parser.add_argument('-u', '--url', help='Remote URL of git repository ending with .git', required=True)
+    args = parse_args(argv)
 
-    args = arg_parser.parse_args()
-
-    git_repo = CheckoutVerifiedCommit(args.target_dir, args.url)
+    git_repo = GitCheckVerifiedCommit(args.target_dir, args.url)
     git_repo.create_checkout_dir()
     git_repo.init_or_load_repo()
 
@@ -231,8 +252,8 @@ def main():
     gitlab_key_fetcher = GitLabGPGKeyFetcher(private_token=private_token)
     gpg_instance = gnupg.GPG()
     while signed_commit_sha is None:
-        fetch_output = git_repo.fetch_git_repo(git_fetch_depth)
-        regx_search = re.search(fetch_regex, fetch_output)
+        fetch_output = git_repo.fetch_git_repo(INITIAL_GIT_FETCH_DEPTH)
+        regx_search = re.search(FETCH_NO_NEW_COMMITS_REGEX, fetch_output)
         if regx_search is not None and git_repo.fetch_depth == 2:
             err_msg = 'No new commits found on server'
             logger.error(err_msg)
@@ -241,12 +262,8 @@ def main():
         emails = git_repo.get_commiter_email(default_remote_branch)
         for e in emails:
             if e not in gpg_keys_imported:
-                unique_ids = gitlab_key_fetcher.fetch_user_uid_by_email(e)
-                logger.debug('UID by Email: %s', unique_ids)
-                if not len(unique_ids):
-                    unique_ids = gitlab_key_fetcher.fetch_user_uid_by_name(e.split('@')[0].split('.')[0])
-                    logger.debug('UID by name: %s', unique_ids)
-
+                unique_ids = gitlab_key_fetcher.fetch_user_uid(e)
+                logger.debug('User UID: %s', unique_ids)
                 for uid in unique_ids:
                     gpg_key = gitlab_key_fetcher.get_gpg_key_by_uid(uid)
                     if gpg_key is not None:
@@ -264,7 +281,7 @@ def main():
                             unique_ids.clear()
                             emails.clear()
                             break
-        git_fetch_depth *= 2
+        INITIAL_GIT_FETCH_DEPTH *= 2
 
 
 if __name__ == '__main__':
