@@ -143,7 +143,7 @@ class GitCheckVerifiedCommit:
         self.uid = None
         self.repo_instance = None
 
-    def create_checkout_dir(self) -> str:
+    def create_checkout_dir(self) -> str | Exception | None:
         """Create the target directory if it doesn't exist."""
         dir_path = self.path_to_checkout_dir
         if self.path_to_checkout_dir is not None:
@@ -171,7 +171,7 @@ class GitCheckVerifiedCommit:
             logger.info("Using existing repo at path: %s", path)
             self.repo_instance = git.Repo(path)
 
-    def fetch_git_repo(self, depth_val: int = 2) -> bool:
+    def fetch_git_repo(self, depth_val: int = 2) -> str | None:
         """Fetch the remote repository with specified depth.
 
         Returns True if new commits were fetched, False otherwise.
@@ -199,7 +199,7 @@ class GitCheckVerifiedCommit:
         logger.debug("Def Branch: %s", default_branch)
         return default_branch
 
-    def get_commiter_email(self, git_branch: str | None = None) -> set:
+    def get_commiter_email(self, git_branch: str | None = None) -> list:
         """Get unique committer emails for a given branch ref, filtered by 'suse' committer."""
         emails = []
         if git_branch is not None:
@@ -212,7 +212,7 @@ class GitCheckVerifiedCommit:
             emails.extend(commit.committer.email for commit in commits)
         return sorted(set(emails))
 
-    def get_signed_commit_sha(self, git_branch: str | None = None) -> str:
+    def get_signed_commit_sha(self, git_branch: str | None = None) -> str | None:
         """Search the git log for the most recent commit with a Good (G) or Unknown (U) GPG signature."""
         commit_sha = None
         ref_name = "origin/" + str(git_branch)
