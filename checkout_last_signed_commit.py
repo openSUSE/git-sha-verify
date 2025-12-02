@@ -6,8 +6,9 @@ is meant to verify git commits coming from external VCS provider such as
 GitHub, bitbucket etc. At present, it can only check out and verify commits
 from only those SUSE employees whose public GPG keys are uploaded in GitLab
 and can be fetched using GET request on GitLab user API endpoint
-https://gitlab.suse.de/api/v4/users/$uid/gpg_keys
+https://gitlab.suse.de/api/v4/users/$uid/gpg_keys.
 """
+from __future__ import annotations
 
 import argparse
 import logging
@@ -30,7 +31,7 @@ FETCH_NO_NEW_COMMITS_REGEX = "remote:.*Total 0 .*"
 
 class GitLabGPGKeyFetcher:
     """GPG Key fetcher class functionalities to fetch GPG key by unique user identifier.
-    Supports fetching user id by user email and username
+    Supports fetching user id by user email and username.
 
     Parameters
     ----------
@@ -65,9 +66,9 @@ class GitLabGPGKeyFetcher:
                 if response.status_code == 200 and len(response.json()) != 0:
                     gpg_key = response.json()[0].get("key")
             except requests.exceptions.HTTPError as e:
-                logger.error("HTTP Error: %s", e)
+                logger.exception("HTTP Error: %s", e)
             except requests.exceptions.RequestException as e:
-                logger.error("An error occurred: %s", e)
+                logger.exception("An error occurred: %s", e)
         return gpg_key
 
     def fetch_user_uid(self, email: str | None = None) -> list[int]:
@@ -108,7 +109,7 @@ class GitLabGPGKeyFetcher:
             )
             response.raise_for_status()
         except requests.exceptions.RequestException as exc:
-            logger.error("Failed searching GitLab users for term=%s: %s", term, exc)
+            logger.exception("Failed searching GitLab users for term=%s: %s", term, exc)
             return []
 
         data = response.json()
@@ -127,7 +128,7 @@ class GitCheckVerifiedCommit:
 
     """
 
-    def __init__(self, target_dir=None, repo_url=None, fetch_depth=2):
+    def __init__(self, target_dir=None, repo_url=None, fetch_depth=2) -> None:
         self.fetch_depth = fetch_depth
         self.path_to_checkout_dir = target_dir
         self.repository_url = repo_url
@@ -143,10 +144,10 @@ class GitCheckVerifiedCommit:
                 Path(str(self.path_to_checkout_dir)).mkdir(mode=766, parents=True, exist_ok=True)
             except Exception as e:
                 dir_path = e
-                logger.error("An error occurred: %s", e)
+                logger.exception("An error occurred: %s", e)
         return dir_path
 
-    def init_or_load_repo(self):
+    def init_or_load_repo(self) -> None:
         """Initialize a new repo or loads an existing one."""
         path = str(self.path_to_checkout_dir) + "/.git"
         if not Path(path).exists() or not Path(path).is_dir():
@@ -177,6 +178,7 @@ class GitCheckVerifiedCommit:
             logger.debug("stdout %s", str(fetcher_info[1]))
             logger.debug("stderr: %s", str(fetcher_info[2]))
             return fetcher_info[2]
+        return None
 
     def get_default_remote_branch(self):
         """Determine the default branch name from the remote 'origin'."""
@@ -199,8 +201,7 @@ class GitCheckVerifiedCommit:
 
         if self.repo_instance is not None:
             commits = self.repo_instance.iter_commits(ref_name, committer="suse")
-            for commit in commits:
-                emails.append(commit.committer.email)
+            emails.extend(commit.committer.email for commit in commits)
         return sorted(set(emails))
 
     def get_signed_commit_sha(self, git_branch=None):

@@ -9,10 +9,10 @@ import checkout_last_signed_commit
 
 
 class Tests(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.monkey_patch = pytest.MonkeyPatch()
 
-    def test_git_lab_gpg_key_fetcher_uninitialized(self):
+    def test_git_lab_gpg_key_fetcher_uninitialized(self) -> None:
         self.monkey_patch.delenv(name="PRIVATE_TOKEN", raising=False)
         with pytest.raises(SystemExit) as exc_info:
             gpg_key_fetcher = checkout_last_signed_commit.GitLabGPGKeyFetcher()
@@ -29,7 +29,7 @@ class Tests(unittest.TestCase):
         assert gpg_key_fetcher.get_gpg_key_by_uid() is None
         assert gpg_key_fetcher.fetch_user_uid() == []
 
-    def test_checkout_verified_commit_uninitialized(self):
+    def test_checkout_verified_commit_uninitialized(self) -> None:
         commit_checker = checkout_last_signed_commit.GitCheckVerifiedCommit()
         assert commit_checker.fetch_depth == 2
         assert commit_checker.path_to_checkout_dir is None
@@ -51,7 +51,7 @@ class Tests(unittest.TestCase):
         assert commit_checker.get_signed_commit_sha() is None
 
     @patch("requests.get")
-    def test_git_lab_gpg_key_fetcher_initialized(self, mock_get):
+    def test_git_lab_gpg_key_fetcher_initialized(self, mock_get) -> None:
         self.monkey_patch.setenv("PRIVATE_TOKEN", "my_temporary_value")
 
         """Test fetch_user_uid by **Name** (failure), call fetch_user_uid() with none as an argument"""
