@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
-"""
-
-This script is written to be used mainly in GitLab CI Pipeline, it is used to
+"""This script is written to be used mainly in GitLab CI Pipeline, it is used to
 check out a verified git commit to be later used in deploy stage. This script
 is meant to verify git commits coming from external VCS provider such as
 GitHub, bitbucket etc. At present, it can only check out and verify commits
@@ -12,32 +10,34 @@ https://gitlab.suse.de/api/v4/users/$uid/gpg_keys
 """
 
 import argparse
+import logging
 import os
+import re
+import sys
+from pathlib import Path
+
 import git
 import gnupg
-import logging
-from pathlib import Path
-import re
 import requests
-import sys
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 GITLAB_USER_API_DEFAULT = "https://gitlab.suse.de/api/v4/users/"
-INITIAL_GIT_FETCH_DEPTH = int(2)
+INITIAL_GIT_FETCH_DEPTH = 2
 FETCH_NO_NEW_COMMITS_REGEX = "remote:.*Total 0 .*"
 
 
 class GitLabGPGKeyFetcher:
-    """
-    GPG Key fetcher class functionalities to fetch GPG key by unique user identifier.
+    """GPG Key fetcher class functionalities to fetch GPG key by unique user identifier.
     Supports fetching user id by user email and username
 
-    Parameters:
+    Parameters
+    ----------
         user_email (str): User email ID.
         user_api_url (str): Service provider (such as GitLab) API endpoint for fetching user information.
         private_token (str): Service provider (such as GitLab) private token for API authentication.
+
     """
 
     def __init__(self, user_email=None, user_api_url=None, private_token=None) -> None:
@@ -65,9 +65,9 @@ class GitLabGPGKeyFetcher:
                 if response.status_code == 200 and len(response.json()) != 0:
                     gpg_key = response.json()[0].get("key")
             except requests.exceptions.HTTPError as e:
-                logger.error(f"HTTP Error: {e}")
+                logger.error("HTTP Error: %s", e)
             except requests.exceptions.RequestException as e:
-                logger.error(f"An error occurred: {e}")
+                logger.error("An error occurred: %s", e)
         return gpg_key
 
     def fetch_user_uid(self, email: str | None = None) -> list[int]:
@@ -86,8 +86,7 @@ class GitLabGPGKeyFetcher:
         return singular_ids
 
     def _fetch_user_uid_by_name(self, name: str | None = None) -> list[int]:
-        """
-        Return a list of user IDs matching a given name.
+        """Return a list of user IDs matching a given name.
         If name is None and user_email is set, use the local-part of the email.
         """
         if name is None and self.user_email:
@@ -117,14 +116,15 @@ class GitLabGPGKeyFetcher:
 
 
 class GitCheckVerifiedCommit:
-    """
-    Checking out verified commit class functionalities to check GPG commit signature before
+    """Checking out verified commit class functionalities to check GPG commit signature before
     checking out the git commit.
 
-    Parameters:
+    Parameters
+    ----------
         target_dir (str): Target directory where to clone or checkout the repository.
         repo_url (str): Git Repository URL.
         fetch_depth (int): Initial Value to provide for fetching number of commits from Git Repository.
+
     """
 
     def __init__(self, target_dir=None, repo_url=None, fetch_depth=2):
@@ -143,7 +143,7 @@ class GitCheckVerifiedCommit:
                 Path(str(self.path_to_checkout_dir)).mkdir(mode=766, parents=True, exist_ok=True)
             except Exception as e:
                 dir_path = e
-                logger.error(f"An error occurred: {e}")
+                logger.error("An error occurred: %s", e)
         return dir_path
 
     def init_or_load_repo(self):
@@ -164,8 +164,7 @@ class GitCheckVerifiedCommit:
             self.repo_instance = git.Repo(path)
 
     def fetch_git_repo(self, depth_val=2):
-        """
-        Fetch the remote repository with specified depth.
+        """Fetch the remote repository with specified depth.
         Returns True if new commits were fetched, False otherwise.
         """
         if self.repo_instance is not None:
@@ -210,7 +209,7 @@ class GitCheckVerifiedCommit:
         ref_name = "origin/" + str(git_branch)
         if self.repo_instance is not None:
             log_op = self.repo_instance.git.log(ref_name, '--pretty="%G? %H"')
-            regex_search = re.search("(?<=[UG] )[a-fA-F0-9]*", log_op)
+            regex_search = re.search(r"(?<=[UG] )[a-fA-F0-9]*", log_op)
             if regex_search is not None:
                 commit_sha = regex_search.group(0)
         return commit_sha
@@ -271,7 +270,7 @@ def main(argv: list[str] | None = None) -> None:
                     gpg_key = gitlab_key_fetcher.get_gpg_key_by_uid(uid)
                     if gpg_key is not None:
                         import_result = gpg_instance.import_keys(gpg_key)
-                        regx_search = re.search("gpg: no valid OpenPGP data found", import_result.stderr)
+                        regx_search = re.search(r"gpg: no valid OpenPGP data found", import_result.stderr)
                         if import_result.returncode == 0 and regx_search is None:
                             gpg_keys_imported.append(e)
                         else:
