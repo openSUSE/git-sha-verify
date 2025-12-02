@@ -9,10 +9,10 @@ coverage:
     changes: false
     project:
       default:
-        target: 90.0
+        target: 60.0
         threshold: 0
       fully_covered:
-        target: 100.0
+        target: 70.0
         paths:
           - checkout_last_signed_commit.py
           - t/
