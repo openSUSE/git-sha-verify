@@ -1,5 +1,6 @@
+# Copyright SUSE LLC
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from requests import RequestException
@@ -16,7 +17,7 @@ class Tests(unittest.TestCase):
         self.monkey_patch.delenv(name="PRIVATE_TOKEN", raising=False)
         with pytest.raises(SystemExit) as exc_info:
             gpg_key_fetcher = checkout_last_signed_commit.GitLabGPGKeyFetcher()
-        assert exc_info.type == SystemExit
+        assert exc_info.type is SystemExit
         assert (
             exc_info.value.code
             == "Please set the environment variable PRIVATE_TOKEN for GitLab User API Authentication"
@@ -41,7 +42,7 @@ class Tests(unittest.TestCase):
 
         with pytest.raises(SystemExit) as exc_info:
             commit_checker.init_or_load_repo()
-        assert exc_info.type == SystemExit
+        assert exc_info.type is SystemExit
         assert (
             exc_info.value.code
             == f"No previous git checkout at {commit_checker.path_to_checkout_dir} and no URL provided"
@@ -51,7 +52,7 @@ class Tests(unittest.TestCase):
         assert commit_checker.get_signed_commit_sha() is None
 
     @patch("requests.get")
-    def test_git_lab_gpg_key_fetcher_initialized(self, mock_get) -> None:
+    def test_git_lab_gpg_key_fetcher_initialized(self, mock_get: MagicMock) -> None:
         self.monkey_patch.setenv("PRIVATE_TOKEN", "my_temporary_value")
 
         """Test fetch_user_uid by **Name** (failure), call fetch_user_uid() with none as an argument"""
@@ -62,13 +63,13 @@ class Tests(unittest.TestCase):
         mock_get.return_value = mock_response
 
         gpg_key_fetcher = checkout_last_signed_commit.GitLabGPGKeyFetcher(
-            user_email="fake.user@email.com",
-            user_api_url="http://api.example.com/users/"
+            user_email="fake.user@email.com", user_api_url="http://api.example.com/users/"
         )
 
         uid = gpg_key_fetcher.fetch_user_uid(email=None)
-        mock_get.assert_called_with(url="http://api.example.com/users/?search=fake",
-                                    headers={"PRIVATE-TOKEN": "my_temporary_value"}, timeout=10)
+        mock_get.assert_called_with(
+            url="http://api.example.com/users/?search=fake", headers={"PRIVATE-TOKEN": "my_temporary_value"}, timeout=10
+        )
         assert uid == []
 
         """
@@ -82,14 +83,17 @@ class Tests(unittest.TestCase):
         mock_get.return_value = mock_response
 
         uid = gpg_key_fetcher.fetch_user_uid(email="mock.user@fake.com")
-        mock_get.assert_called_with(url="http://api.example.com/users/?search=mock.user@fake.com",
-                                    headers={"PRIVATE-TOKEN": "my_temporary_value"}, timeout=10)
+        mock_get.assert_called_with(
+            url="http://api.example.com/users/?search=mock.user@fake.com",
+            headers={"PRIVATE-TOKEN": "my_temporary_value"},
+            timeout=10,
+        )
         assert uid == [100, 200]
 
         """Test _search_user_ids by **username**"""
         mock_data = [{"id": 300, "username": "mockuser"}, {"id": 400, "username": "usermock"}]
         mock_response.json.return_value = mock_data
-        uid = gpg_key_fetcher._search_user_ids("mock.user")
+        uid = gpg_key_fetcher._search_user_ids("mock.user")  # noqa: SLF001
         mock_get.assert_called_with(
             url="http://api.example.com/users/?search=mock.user",
             headers={"PRIVATE-TOKEN": "my_temporary_value"},
@@ -100,7 +104,7 @@ class Tests(unittest.TestCase):
         """Test _search_user_ids by **Name**"""
         mock_data = [{"id": 500, "username": "Fake User"}, {"id": 600, "username": "johndoe"}]
         mock_response.json.return_value = mock_data
-        uid = gpg_key_fetcher._fetch_user_uid_by_name("Fake User")
+        uid = gpg_key_fetcher._fetch_user_uid_by_name("Fake User")  # noqa: SLF001
         mock_get.assert_called_with(
             url="http://api.example.com/users/?search=Fake User",
             headers={"PRIVATE-TOKEN": "my_temporary_value"},
@@ -111,16 +115,19 @@ class Tests(unittest.TestCase):
         """Test _search_user_ids by firstname.lastname extracted from email part"""
         mock_data = [{"id": 700, "username": "Fake User"}, {"id": 800, "username": "johndoe"}]
         mock_response.json.return_value = mock_data
-        uid = gpg_key_fetcher._fetch_user_uid_by_name(name=None)
-        mock_get.assert_called_with(url="http://api.example.com/users/?search=fake.user",
-                                    headers={"PRIVATE-TOKEN": "my_temporary_value"}, timeout=10)
+        uid = gpg_key_fetcher._fetch_user_uid_by_name(name=None)  # noqa: SLF001
+        mock_get.assert_called_with(
+            url="http://api.example.com/users/?search=fake.user",
+            headers={"PRIVATE-TOKEN": "my_temporary_value"},
+            timeout=10,
+        )
         assert uid == [700, 800]
 
         """Test _search_user_ids for empty response with error status as HTTP response"""
         mock_response.status_code = 500
         mock_response.raise_for_status = Mock()
         mock_response.raise_for_status.side_effect = HTTPError("gitlab is down")
-        uid = gpg_key_fetcher._fetch_user_uid_by_name("Fake User")
+        uid = gpg_key_fetcher._fetch_user_uid_by_name("Fake User")  # noqa: SLF001
         mock_get.assert_called_with(
             url="http://api.example.com/users/?search=Fake User",
             headers={"PRIVATE-TOKEN": "my_temporary_value"},
@@ -130,7 +137,7 @@ class Tests(unittest.TestCase):
 
         """Test _search_user_ids for empty return value"""
         gpg_key_fetcher.user_email = None
-        uid = gpg_key_fetcher._fetch_user_uid_by_name(name=None)
+        uid = gpg_key_fetcher._fetch_user_uid_by_name(name=None)  # noqa: SLF001
         assert uid == []
 
         """Test get_gpg_key_by_uid return value for mocked GPG Key"""
@@ -152,8 +159,9 @@ class Tests(unittest.TestCase):
         mock_response.raise_for_status = Mock()
         mock_response.raise_for_status.side_effect = HTTPError("GPG Key Not Found!")
         gpg_key = gpg_key_fetcher.get_gpg_key_by_uid(uid=500)
-        mock_get.assert_called_with(url="http://api.example.com/users/500/gpg_keys",
-                                    headers={"PRIVATE-TOKEN": "my_temporary_value"})
+        mock_get.assert_called_with(
+            url="http://api.example.com/users/500/gpg_keys", headers={"PRIVATE-TOKEN": "my_temporary_value"}
+        )
         assert gpg_key is None
 
         """Test get_gpg_key_by_uid for empty response with Request Exception"""
@@ -161,8 +169,9 @@ class Tests(unittest.TestCase):
         mock_response.raise_for_status = Mock()
         mock_response.raise_for_status.side_effect = RequestException("Mocked Request Exception")
         gpg_key = gpg_key_fetcher.get_gpg_key_by_uid(uid=500)
-        mock_get.assert_called_with(url="http://api.example.com/users/500/gpg_keys",
-                                    headers={"PRIVATE-TOKEN": "my_temporary_value"})
+        mock_get.assert_called_with(
+            url="http://api.example.com/users/500/gpg_keys", headers={"PRIVATE-TOKEN": "my_temporary_value"}
+        )
         assert gpg_key is None
 
 
