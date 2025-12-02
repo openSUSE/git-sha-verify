@@ -20,10 +20,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/openSUSE/qem-bot"
-
-[project.scripts]
-qem-bot = "openqabot.main:main"
+Homepage = "https://github.com/openSUSE/git-sha-verify"
 
 [dependency-groups]
 dev = [
