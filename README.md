@@ -28,11 +28,12 @@ for consideration or create an issue with a code change proposal.
 ### Local testing
 
 Ensure you have the dependencies for development installed. The easiest
-way to get them is via uv:
+way to install dependencies and run tests is with uv:
 
-    uv pip install -e ".[dev]"
+    uv run make test
 
-Run `make test` or `pytest` to execute Python-based unit tests.
+Alternatively if you are in an environment already providing all necessary
+dependencies run `make test` or `pytest` to execute Python-based unit tests.
 
 Run `make checkstyle` to check coding style and `make tidy` for automated
 formatting.
