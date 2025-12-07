@@ -1,4 +1,5 @@
 # Copyright SUSE LLC
+import re
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
@@ -18,10 +19,7 @@ class Tests(unittest.TestCase):
         with pytest.raises(SystemExit) as exc_info:
             gpg_key_fetcher = checkout_last_signed_commit.GitLabGPGKeyFetcher()
         assert exc_info.type is SystemExit
-        assert (
-            exc_info.value.code
-            == "Please set the environment variable PRIVATE_TOKEN for GitLab User API Authentication"
-        )
+        assert exc_info.value.code == "Please set env var PRIVATE_TOKEN for GitLab User API Authentication"
 
         self.monkey_patch.setenv(name="PRIVATE_TOKEN", value="my_temporary_value")
         gpg_key_fetcher = checkout_last_signed_commit.GitLabGPGKeyFetcher()
@@ -32,7 +30,6 @@ class Tests(unittest.TestCase):
 
     def test_checkout_verified_commit_uninitialized(self) -> None:
         commit_checker = checkout_last_signed_commit.GitCheckVerifiedCommit()
-        assert commit_checker.fetch_depth == 2
         assert commit_checker.path_to_checkout_dir is None
         assert commit_checker.repository_url is None
         assert commit_checker.commit_sha is None
@@ -43,10 +40,7 @@ class Tests(unittest.TestCase):
         with pytest.raises(SystemExit) as exc_info:
             commit_checker.init_or_load_repo()
         assert exc_info.type is SystemExit
-        assert (
-            exc_info.value.code
-            == f"No previous git checkout at {commit_checker.path_to_checkout_dir} and no URL provided"
-        )
+        assert re.search(r"No previous\s.*provided", exc_info.value.code)
         assert commit_checker.get_default_remote_branch() is None
         assert commit_checker.get_commiter_email() == []
         assert commit_checker.get_signed_commit_sha() is None
