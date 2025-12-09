@@ -13,7 +13,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      - run: uv run make test
+      - run: uv run make test-with-coverage
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
