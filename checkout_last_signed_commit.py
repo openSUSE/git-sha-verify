@@ -29,6 +29,12 @@ logger = logging.getLogger(__name__)
 
 GITLAB_USER_API_DEFAULT = "https://gitlab.suse.de/api/v4/users/"
 INITIAL_GIT_FETCH_DEPTH = 2
+
+"""
+Depth value 2147483647 (or 0x7fffffff, the largest positive number a signed 32-bit integer can contain)
+means infinite depth, refer https://git-scm.com/docs/shallow
+"""
+GIT_FETCH_DEPTH_LIMIT = 2147483647
 FETCH_NO_NEW_COMMITS_REGEX = "remote:.*Total 0 .*"
 
 
@@ -50,7 +56,7 @@ class GitLabGPGKeyFetcher:
     ) -> None:
         self.private_token = private_token or os.environ.get("PRIVATE_TOKEN")
         if not self.private_token:
-            err_msg = "Please set the environment variable PRIVATE_TOKEN for GitLab User API Authentication"
+            err_msg = "Please set env var PRIVATE_TOKEN for GitLab User API Authentication"
             logger.error(err_msg)
             sys.exit(err_msg)
 
@@ -88,7 +94,7 @@ class GitLabGPGKeyFetcher:
         if not singular_ids:
             base_name = email.split("@")[0].split(".")[0]
             singular_ids = self._fetch_user_uid_by_name(base_name)
-            logger.debug("UIDs by derived name %s: %s", base_name, singular_ids)
+            logger.debug("UIDs derived by name %s: %s", base_name, singular_ids)
 
         return singular_ids
 
@@ -131,14 +137,13 @@ class GitCheckVerifiedCommit:
     ----------
         target_dir (str): Target directory where to clone or checkout the repository.
         repo_url (str): Git Repository URL.
-        fetch_depth (int): Initial Value to provide for fetching number of commits from Git Repository.
 
     """
 
-    def __init__(self, target_dir: str | None = None, repo_url: str | None = None, fetch_depth: int | None = 2) -> None:
-        self.fetch_depth = fetch_depth
+    def __init__(self, target_dir: str | None = None, repo_url: str | None = None) -> None:
         self.path_to_checkout_dir = target_dir
         self.repository_url = repo_url
+        self.fetch_args = None
         self.commit_sha = None
         self.uid = None
         self.repo_instance = None
@@ -171,16 +176,23 @@ class GitCheckVerifiedCommit:
             logger.info("Using existing repo at path: %s", path)
             self.repo_instance = git.Repo(path)
 
-    def fetch_git_repo(self, depth_val: int = 2) -> str | None:
-        """Fetch the remote repository with specified depth.
-
-        Returns True if new commits were fetched, False otherwise.
-        """
+    def fetch_git_repo(self, depth_val: int = INITIAL_GIT_FETCH_DEPTH) -> str | None:
+        """Fetch the remote repo with specified depth. Return True if new commits were fetched, False otherwise."""
+        num_jobs = os.cpu_count()
         if self.repo_instance is not None:
-            self.fetch_depth = depth_val
-            logger.info("Fetching with depth %s", self.fetch_depth)
+            if depth_val == INITIAL_GIT_FETCH_DEPTH:
+                self.fetch_args = {"depth": depth_val}
+            else:
+                self.fetch_args = {"deepen": min(GIT_FETCH_DEPTH_LIMIT, depth_val)}
+
             fetcher_info = self.repo_instance.git.fetch(
-                "origin", depth=self.fetch_depth, with_extended_output=True, progress=True
+                "origin",
+                "--no-tags",
+                "--no-show-forced-updates",
+                with_extended_output=True,
+                progress=True,
+                jobs=(num_jobs - 1) if num_jobs is not None and num_jobs >= 3 else 1,
+                **self.fetch_args,
             )
             logger.debug("Status: %s", fetcher_info[0])
             logger.debug("stdout %s", fetcher_info[1])
@@ -208,8 +220,8 @@ class GitCheckVerifiedCommit:
             ref_name = "origin/" + str(self.get_default_remote_branch())
 
         if self.repo_instance is not None:
-            commits = self.repo_instance.iter_commits(ref_name, committer="suse")
-            emails.extend(commit.committer.email for commit in commits)
+            for commit in self.repo_instance.iter_commits(ref_name, committer="suse"):
+                emails.append(commit.committer.email)  # noqa: PERF401 use list.extend
         return sorted(set(emails))
 
     def get_signed_commit_sha(self, git_branch: str | None = None) -> str | None:
@@ -243,11 +255,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv: list[str] | None = None) -> None:
+def main(argv: list[str] | None = None) -> None:  # noqa: C901 complex-structure
     unique_ids = []
     signed_commit_sha = None
     default_remote_branch = None
     gpg_keys_imported = []
+    gpg_keys_not_found = []
     git_fetch_depth = INITIAL_GIT_FETCH_DEPTH
 
     args = parse_args(argv)
@@ -265,16 +278,18 @@ def main(argv: list[str] | None = None) -> None:
     while signed_commit_sha is None:  # noqa: PLR1702 too-many-nested-blocks
         fetch_output = git_repo.fetch_git_repo(git_fetch_depth)
         regx_search = re.search(FETCH_NO_NEW_COMMITS_REGEX, fetch_output)
-        if regx_search is not None and git_repo.fetch_depth == 2:
+        if regx_search is not None:
             err_msg = "No new commits found on server"
             logger.error(err_msg)
             sys.exit(err_msg)
+        elif git_fetch_depth >= GIT_FETCH_DEPTH_LIMIT:
+            logger.error("Cannot find a verified commit in last %s commits", git_fetch_depth)
+            break
 
         emails = git_repo.get_commiter_email(default_remote_branch)
         for e in emails:
-            if e not in gpg_keys_imported:
+            if e not in gpg_keys_imported and e not in gpg_keys_not_found:
                 unique_ids = gitlab_key_fetcher.fetch_user_uid(e)
-                logger.debug("User UID: %s", unique_ids)
                 for uid in unique_ids:
                     gpg_key = gitlab_key_fetcher.get_gpg_key_by_uid(uid)
                     if gpg_key is not None:
@@ -282,6 +297,7 @@ def main(argv: list[str] | None = None) -> None:
                         regx_search = re.search(r"gpg: no valid OpenPGP data found", import_result.stderr)
                         if import_result.returncode == 0 and regx_search is None:
                             gpg_keys_imported.append(e)
+                            gpg_keys_imported = sorted(set(gpg_keys_imported))
                         else:
                             logger.error("no valid OpenPGP data found for uid: %s", uid)
 
@@ -292,6 +308,14 @@ def main(argv: list[str] | None = None) -> None:
                             unique_ids.clear()
                             emails.clear()
                             break
+                    else:
+                        gpg_keys_not_found.append(e)
+                        gpg_keys_not_found = sorted(set(gpg_keys_not_found))
+            else:
+                if gpg_keys_imported:
+                    logger.debug("GPG Keys already Imported for %s", gpg_keys_imported)
+                if gpg_keys_not_found:
+                    logger.debug("GPG Keys not found for %s", gpg_keys_not_found)
         git_fetch_depth *= 2
 
 
