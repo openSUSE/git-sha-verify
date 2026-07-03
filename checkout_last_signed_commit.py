@@ -262,7 +262,7 @@ def main(argv: list[str] | None = None) -> None:
     private_token = os.environ.get("PRIVATE_TOKEN")
     gitlab_key_fetcher = GitLabGPGKeyFetcher(private_token=private_token)
     gpg_instance = gnupg.GPG()
-    while signed_commit_sha is None:  # noqa: PLR1702 too-many-nested-blocks
+    while True:  # noqa: PLR1702 too-many-nested-blocks
         fetch_output = git_repo.fetch_git_repo(git_fetch_depth)
         regx_search = re.search(FETCH_NO_NEW_COMMITS_REGEX, fetch_output)
         if regx_search is not None and git_repo.fetch_depth == 2:

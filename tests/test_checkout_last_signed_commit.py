@@ -1,4 +1,5 @@
 # Copyright SUSE LLC
+import pathlib
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
@@ -154,6 +155,12 @@ class Tests(unittest.TestCase):
         )
         assert gpg_key == mock_gpg_key
 
+        """Test get_gpg_key_by_uid for empty response list with 200 status code"""
+        mock_response.status_code = 200
+        mock_response.json.return_value = []
+        gpg_key = gpg_key_fetcher.get_gpg_key_by_uid(uid=500)
+        assert gpg_key is None
+
         """Test get_gpg_key_by_uid for empty response with error status as HTTP response"""
         mock_response.status_code = 404
         mock_response.raise_for_status = Mock()
@@ -192,17 +199,10 @@ class Tests(unittest.TestCase):
     @patch("checkout_last_signed_commit.Path")
     def test_init_or_load_repo(self, mock_path: MagicMock, mock_repo_class: MagicMock) -> None:
         # Case 1: .git does not exist, URL is provided -> Repo.init
-        def path_side_effect(path_str: str) -> MagicMock:
-            m = MagicMock()
-            if ".git" in str(path_str):
-                m.exists.return_value = False
-                m.is_dir.return_value = False
-            else:
-                m.exists.return_value = True
-                m.is_dir.return_value = True
-            return m
-
-        mock_path.side_effect = path_side_effect
+        mock_git_path = MagicMock()
+        mock_git_path.exists.return_value = False
+        mock_git_path.is_dir.return_value = False
+        mock_path.return_value = mock_git_path
 
         mock_repo = MagicMock()
         mock_repo_class.init.return_value = mock_repo
@@ -339,14 +339,14 @@ class Tests(unittest.TestCase):
                 "expected_exit": "No new commits found on server",
                 "expected_checkout": None,
             },
-            # Case 2: Success
+            # Case 2: Success with duplicate emails
             {
                 "fetch_repo_ret": "new commits",
-                "committer_emails": ["developer@suse.com"],
-                "uids": [123],
+                "committer_emails": ["skipped@suse.com", "skipped@suse.com", "dev@suse.com"],
+                "uids": [[123], [456]],
                 "gpg_key_side": "gpg-key-content",
                 "import_code": 0,
-                "signed_commit": "abcdef123456",
+                "signed_commit": [None, "abcdef123456"],
                 "expected_exit": None,
                 "expected_checkout": "abcdef123456",
             },
@@ -361,6 +361,17 @@ class Tests(unittest.TestCase):
                 "expected_exit": None,
                 "expected_checkout": "abcdef123456",
             },
+            # Case 4: Success with empty emails on first try, exits on second try
+            {
+                "fetch_repo_ret": "new commits",
+                "committer_emails": [[], ["dev@suse.com"]],
+                "uids": [789],
+                "gpg_key_side": "gpg-key-content-3",
+                "import_code": 0,
+                "signed_commit": "abcdef987654",
+                "expected_exit": None,
+                "expected_checkout": "abcdef987654",
+            },
         ]
 
         for s in scenarios:
@@ -371,12 +382,25 @@ class Tests(unittest.TestCase):
             mock_checker = MagicMock()
             mock_checker.fetch_depth = 2
             mock_checker.fetch_git_repo.return_value = s["fetch_repo_ret"]
-            mock_checker.get_commiter_email.return_value = s["committer_emails"]
-            mock_checker.get_signed_commit_sha.return_value = s["signed_commit"]
+
+            if s["committer_emails"] and isinstance(s["committer_emails"][0], list):
+                mock_checker.get_commiter_email.side_effect = s["committer_emails"]
+            else:
+                mock_checker.get_commiter_email.return_value = s["committer_emails"]
+
+            if isinstance(s["signed_commit"], list):
+                mock_checker.get_signed_commit_sha.side_effect = s["signed_commit"]
+            else:
+                mock_checker.get_signed_commit_sha.return_value = s["signed_commit"]
+
             mock_checker_class.return_value = mock_checker
 
             mock_fetcher = MagicMock()
-            mock_fetcher.fetch_user_uid.return_value = s["uids"]
+            if s["uids"] and isinstance(s["uids"][0], list):
+                mock_fetcher.fetch_user_uid.side_effect = s["uids"]
+            else:
+                mock_fetcher.fetch_user_uid.return_value = s["uids"]
+
             if isinstance(s["gpg_key_side"], list):
                 mock_fetcher.get_gpg_key_by_uid.side_effect = s["gpg_key_side"]
             else:
@@ -396,11 +420,18 @@ class Tests(unittest.TestCase):
                 assert exc_info.value.code == s["expected_exit"]
             else:
                 checkout_last_signed_commit.main(["-t", "fake_dir", "-u", "https://example.com/repo.git"])
-                if s["expected_checkout"]:
-                    mock_checker.repo_instance.git.checkout.assert_called_once_with(s["expected_checkout"])
-                else:
-                    mock_checker.repo_instance.git.checkout.assert_not_called()
+                mock_checker.repo_instance.git.checkout.assert_called_once_with(s["expected_checkout"])
 
+    def test_main_execution(self) -> None:
+        import sys
 
-if __name__ == "__main__":
-    unittest.main()
+        orig_argv = sys.argv
+        sys.argv = ["checkout_last_signed_commit.py"]
+
+        script_content = pathlib.Path("checkout_last_signed_commit.py").read_text(encoding="utf-8")
+        code = compile(script_content, "checkout_last_signed_commit.py", "exec")
+
+        with pytest.raises(SystemExit):
+            exec(code, {"__name__": "__main__"})  # noqa: S102
+
+        sys.argv = orig_argv
