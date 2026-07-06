@@ -29,6 +29,9 @@ logger = logging.getLogger(__name__)
 
 GITLAB_USER_API_DEFAULT = "https://gitlab.suse.de/api/v4/users/"
 INITIAL_GIT_FETCH_DEPTH = 2
+
+# Depth 2147483647 (0x7fffffff, max signed 32-bit int) means infinite depth: https://git-scm.com/docs/shallow
+GIT_FETCH_DEPTH_LIMIT = 2147483647
 FETCH_NO_NEW_COMMITS_REGEX = "remote:.*Total 0 .*"
 
 
@@ -131,12 +134,10 @@ class GitCheckVerifiedCommit:
     ----------
         target_dir (str): Target directory where to clone or checkout the repository.
         repo_url (str): Git Repository URL.
-        fetch_depth (int): Initial Value to provide for fetching number of commits from Git Repository.
 
     """
 
-    def __init__(self, target_dir: str | None = None, repo_url: str | None = None, fetch_depth: int | None = 2) -> None:
-        self.fetch_depth = fetch_depth
+    def __init__(self, target_dir: str | None = None, repo_url: str | None = None) -> None:
         self.path_to_checkout_dir = target_dir
         self.repository_url = repo_url
         self.commit_sha = None
@@ -171,16 +172,19 @@ class GitCheckVerifiedCommit:
             logger.info("Using existing repo at path: %s", path)
             self.repo_instance = git.Repo(path)
 
-    def fetch_git_repo(self, depth_val: int = 2) -> str | None:
-        """Fetch the remote repository with specified depth.
-
-        Returns True if new commits were fetched, False otherwise.
-        """
+    def fetch_git_repo(self, depth_val: int = INITIAL_GIT_FETCH_DEPTH) -> str | None:
+        """Fetch the remote repo with specified depth. Return the fetch stderr output, or None if no repo instance."""
+        cpus = os.cpu_count() or 1
+        fetch_jobs = max(1, cpus - 1)
         if self.repo_instance is not None:
-            self.fetch_depth = depth_val
-            logger.info("Fetching with depth %s", self.fetch_depth)
             fetcher_info = self.repo_instance.git.fetch(
-                "origin", depth=self.fetch_depth, with_extended_output=True, progress=True
+                "origin",
+                "--no-tags",
+                "--no-show-forced-updates",
+                with_extended_output=True,
+                progress=True,
+                jobs=fetch_jobs,
+                depth=min(GIT_FETCH_DEPTH_LIMIT, depth_val),
             )
             logger.debug("Status: %s", fetcher_info[0])
             logger.debug("stdout %s", fetcher_info[1])
@@ -265,7 +269,7 @@ def main(argv: list[str] | None = None) -> None:
     while True:  # noqa: PLR1702 too-many-nested-blocks
         fetch_output = git_repo.fetch_git_repo(git_fetch_depth)
         regx_search = re.search(FETCH_NO_NEW_COMMITS_REGEX, fetch_output)
-        if regx_search is not None and git_repo.fetch_depth == 2:
+        if regx_search is not None and git_fetch_depth == 2:
             err_msg = "No new commits found on server"
             logger.error(err_msg)
             sys.exit(err_msg)

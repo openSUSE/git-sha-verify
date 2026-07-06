@@ -1,7 +1,7 @@
 # Copyright SUSE LLC
 import pathlib
 import unittest
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import ANY, MagicMock, Mock, patch
 
 import pytest
 from requests import RequestException
@@ -33,7 +33,6 @@ class Tests(unittest.TestCase):
 
     def test_checkout_verified_commit_uninitialized(self) -> None:
         commit_checker = checkout_last_signed_commit.GitCheckVerifiedCommit()
-        assert commit_checker.fetch_depth == 2
         assert commit_checker.path_to_checkout_dir is None
         assert commit_checker.repository_url is None
         assert commit_checker.commit_sha is None
@@ -247,8 +246,15 @@ class Tests(unittest.TestCase):
 
         res = commit_checker.fetch_git_repo(depth_val=5)
         assert res == "stderr_output"
-        assert commit_checker.fetch_depth == 5
-        mock_repo.git.fetch.assert_called_once_with("origin", depth=5, with_extended_output=True, progress=True)
+        mock_repo.git.fetch.assert_called_once_with(
+            "origin",
+            "--no-tags",
+            "--no-show-forced-updates",
+            with_extended_output=True,
+            progress=True,
+            jobs=ANY,
+            depth=5,
+        )
 
     def test_get_default_remote_branch(self) -> None:
         commit_checker = checkout_last_signed_commit.GitCheckVerifiedCommit(target_dir="fake_dir")
@@ -380,7 +386,6 @@ class Tests(unittest.TestCase):
             mock_checker_class.reset_mock()
 
             mock_checker = MagicMock()
-            mock_checker.fetch_depth = 2
             mock_checker.fetch_git_repo.return_value = s["fetch_repo_ret"]
 
             if s["committer_emails"] and isinstance(s["committer_emails"][0], list):
