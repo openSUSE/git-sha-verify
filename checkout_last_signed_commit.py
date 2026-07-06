@@ -205,16 +205,11 @@ class GitCheckVerifiedCommit:
 
     def get_commiter_email(self, git_branch: str | None = None) -> list:
         """Get unique committer emails for a given branch ref, filtered by 'suse' committer."""
-        emails = []
-        if git_branch is not None:
-            ref_name = "origin/" + str(git_branch)
-        else:
-            ref_name = "origin/" + str(self.get_default_remote_branch())
-
+        ref_name = f"origin/{git_branch or self.get_default_remote_branch()}"
         if self.repo_instance is not None:
-            commits = self.repo_instance.iter_commits(ref_name, committer="suse")
-            emails.extend(commit.committer.email for commit in commits)
-        return sorted(set(emails))
+            emails = {commit.committer.email for commit in self.repo_instance.iter_commits(ref_name, committer="suse")}
+            return sorted(emails)
+        return []
 
     def get_signed_commit_sha(self, git_branch: str | None = None) -> str | None:
         """Search the git log for the most recent commit with a Good (G) or Unknown (U) GPG signature."""
