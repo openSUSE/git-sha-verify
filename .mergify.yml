@@ -1,4 +1,9 @@
 ---
+merge_queue:
+  max_parallel_checks: 3
+  status_comments: none
+  queue_controls_comment: false
+
 pull_request_rules:
   - name: automatic merge
     conditions:
