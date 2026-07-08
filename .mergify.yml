@@ -29,3 +29,15 @@ pull_request_rules:
     actions:
       comment:
         message: This pull request is now in conflicts. Could you fix it? 🙏
+queue_rules:
+  - name: git-sha-verify-merge-queue
+    queue_conditions:
+      - repository-name = git-sha-verify
+      - base = main
+      - approved-reviews-by >= 2
+    max_checks_retries: 1
+    merge_conditions:
+      - -draft
+    update_method: rebase
+merge_queue:
+  max_parallel_checks: 3
