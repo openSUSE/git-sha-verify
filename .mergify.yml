@@ -28,9 +28,12 @@ pull_request_rules:
       - and: *base_checks
       - "label=merge-fast"
     actions: *merge
-  - name: ask to resolve conflict
+  - name: automatic merge for dependabot updates
     conditions:
-      - conflict
+      - and: *base_checks
+      - and:
+          - base=main
+          - author=dependabot[bot]
     actions:
-      comment:
-        message: This pull request is now in conflicts. Could you fix it? 🙏
+      merge:
+        method: squash
