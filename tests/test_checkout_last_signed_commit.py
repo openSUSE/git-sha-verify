@@ -93,7 +93,7 @@ class Tests(unittest.TestCase):
         """Test _search_user_ids by **username**"""
         mock_data = [{"id": 300, "username": "mockuser"}, {"id": 400, "username": "usermock"}]
         mock_response.json.return_value = mock_data
-        uid = gpg_key_fetcher._search_user_ids("mock.user")  # noqa: SLF001
+        uid = gpg_key_fetcher._search_user_ids("mock.user")  # ruff: ignore[private-member-access]
         mock_get.assert_called_with(
             url="http://api.example.com/users/?search=mock.user",
             headers={"PRIVATE-TOKEN": "my_temporary_value"},
@@ -104,7 +104,7 @@ class Tests(unittest.TestCase):
         """Test _search_user_ids by **Name**"""
         mock_data = [{"id": 500, "username": "Fake User"}, {"id": 600, "username": "johndoe"}]
         mock_response.json.return_value = mock_data
-        uid = gpg_key_fetcher._fetch_user_uid_by_name("Fake User")  # noqa: SLF001
+        uid = gpg_key_fetcher._fetch_user_uid_by_name("Fake User")  # ruff: ignore[private-member-access]
         mock_get.assert_called_with(
             url="http://api.example.com/users/?search=Fake User",
             headers={"PRIVATE-TOKEN": "my_temporary_value"},
@@ -115,7 +115,7 @@ class Tests(unittest.TestCase):
         """Test _search_user_ids by firstname.lastname extracted from email part"""
         mock_data = [{"id": 700, "username": "Fake User"}, {"id": 800, "username": "johndoe"}]
         mock_response.json.return_value = mock_data
-        uid = gpg_key_fetcher._fetch_user_uid_by_name(name=None)  # noqa: SLF001
+        uid = gpg_key_fetcher._fetch_user_uid_by_name(name=None)  # ruff: ignore[private-member-access]
         mock_get.assert_called_with(
             url="http://api.example.com/users/?search=fake.user",
             headers={"PRIVATE-TOKEN": "my_temporary_value"},
@@ -127,7 +127,7 @@ class Tests(unittest.TestCase):
         mock_response.status_code = 500
         mock_response.raise_for_status = Mock()
         mock_response.raise_for_status.side_effect = HTTPError("gitlab is down")
-        uid = gpg_key_fetcher._fetch_user_uid_by_name("Fake User")  # noqa: SLF001
+        uid = gpg_key_fetcher._fetch_user_uid_by_name("Fake User")  # ruff: ignore[private-member-access]
         mock_get.assert_called_with(
             url="http://api.example.com/users/?search=Fake User",
             headers={"PRIVATE-TOKEN": "my_temporary_value"},
@@ -137,7 +137,7 @@ class Tests(unittest.TestCase):
 
         """Test _search_user_ids for empty return value"""
         gpg_key_fetcher.user_email = None
-        uid = gpg_key_fetcher._fetch_user_uid_by_name(name=None)  # noqa: SLF001
+        uid = gpg_key_fetcher._fetch_user_uid_by_name(name=None)  # ruff: ignore[private-member-access]
         assert uid == []
 
         """Test get_gpg_key_by_uid return value for mocked GPG Key"""
@@ -454,6 +454,6 @@ class Tests(unittest.TestCase):
         code = compile(script_content, "checkout_last_signed_commit.py", "exec")
 
         with pytest.raises(SystemExit):
-            exec(code, {"__name__": "__main__"})  # noqa: S102
+            exec(code, {"__name__": "__main__"})  # ruff: ignore[exec-builtin]
 
         sys.argv = orig_argv

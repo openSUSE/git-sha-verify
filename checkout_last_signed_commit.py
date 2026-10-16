@@ -68,7 +68,7 @@ class GitLabGPGKeyFetcher:
         gpg_key = None
         if uid is not None:
             try:
-                response = requests.get(  # noqa: S113 request-without-timeout
+                response = requests.get(  # ruff: ignore[request-without-timeout]
                     url=self.user_api_url + str(uid) + "/gpg_keys", headers={"PRIVATE-TOKEN": self.private_token}
                 )
                 response.raise_for_status()
@@ -127,8 +127,7 @@ class GitLabGPGKeyFetcher:
 
 
 class GitRepoVerifier:
-    # ruff: noqa: E501
-    """Checking out verified commit class functionalities to check GPG commit signature before checking out the git commit.
+    """Check the GPG signature of git commits before checking out a verified commit.
 
     Parameters
     ----------
@@ -173,7 +172,10 @@ class GitRepoVerifier:
             self.repo_instance = git.Repo(path)
 
     def fetch_git_repo(self, depth: int = INITIAL_GIT_FETCH_DEPTH) -> str:
-        """Fetch a specific depth of the remote repository and return its stderr output, or an empty string if not initialized."""
+        """Fetch the remote repository to a given depth.
+
+        Return its stderr output, or an empty string if not initialized.
+        """
         cpus = os.cpu_count() or 1
         fetch_jobs = max(1, cpus - 1)
         if self.repo_instance:

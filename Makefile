@@ -1,4 +1,6 @@
 SOURCE_FILES ?= $(shell git ls-files "**.py")
+# Prefer the project's pinned ruff from the virtualenv over any system-wide one
+RUFF ?= $(if $(wildcard .venv/bin/ruff),.venv/bin/ruff,ruff)
 
 .PHONY: all
 all:
@@ -9,13 +11,13 @@ only-test:
 
 .PHONY: ruff
 ruff:
-	ruff check
-	ruff format --check
+	$(RUFF) check
+	$(RUFF) format --check
 
 .PHONY: tidy
 tidy:
-	ruff format
-	ruff check --fix
+	$(RUFF) format
+	$(RUFF) check --fix
 
 .PHONY: typecheck
 typecheck:

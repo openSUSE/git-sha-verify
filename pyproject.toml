@@ -29,7 +29,7 @@ dev = [
     "pytest-cov",
     "coverage",
     "radon",
-    "ruff",
+    "ruff==0.17.1",
     "vulture",
 ]
 
@@ -60,7 +60,7 @@ preview = true
 # PL: Pylint
 extend-select =[
     "E", "F", "D", "Q", "PL",
-    "T100", # https://docs.astral.sh/ruff/rules/#flake8-debugger-t10
+    "debugger", # https://docs.astral.sh/ruff/rules/#flake8-debugger-t10
     "T2", # https://docs.astral.sh/ruff/rules/#flake8-print-t20
     "TD", # https://docs.astral.sh/ruff/rules/#flake8-todos-td
     "W",
@@ -120,43 +120,43 @@ extend-select =[
 ]
 
 ignore = [
-    "D100",   # missing-module-docstring
-    "D101",   # missing-class-docstring
-    "D102",   # missing-method-docstring
-    "D103",   # missing-function-docstring
-    "D104",   # missing-package-docstring
-    "D105",   # missing-magic-method-docstring
-    "D107",   # missing-init-docstring
-    "D203",   # incorrect-blank-line-before-class
-    "N801",   # invalid-class-name
-    "N802",   # invalid-function-name
-    "N803",   # invalid-argument-name
-    "N806",   # invalid-variable-name
-    "UP032",
-    "PLC0415", # import-outside-toplevel
-    "PLC1802", # use-implicit-booleaness-not-len
-    "PLR0912", # too-many-branches
-    "PLR0913", # too-many-arguments
-    "PLR0914", # too-many-locals
-    "PLR0915", # too-many-statements
-    "PLR2004", # magic-value-comparison
-    "D213", # multi-line-summary-second-line
-    "PLW2901", # redefined-loop-name
-    "PLW0127", # self-assigning-variable
-    "PLW0128", # redeclared-assigned-name
-    "PLW0129", # assert-on-string-literal
-    "B019",
-    "ANN401", # any-type
-    "S101",
-    "PLR6301", # no-self-use
-    "PLC1901", # compare-to-empty-string
-    "DOC201", # docstring-missing-returns
-    "DOC501", # docstring-missing-exception
-    "COM812", # missing-trailing-comma
-    "TC001", # typing-only-first-party-import
-    "TC002", # typing-only-third-party-import
-    "TC003", # typing-only-standard-library-import
-    "FURB140", # reimplemented-starmap: less efficient than comprehensions https://github.com/astral-sh/ruff/issues/7771
+    "undocumented-public-module",   # missing-module-docstring
+    "undocumented-public-class",   # missing-class-docstring
+    "undocumented-public-method",   # missing-method-docstring
+    "undocumented-public-function",   # missing-function-docstring
+    "undocumented-public-package",   # missing-package-docstring
+    "undocumented-magic-method",   # missing-magic-method-docstring
+    "undocumented-public-init",   # missing-init-docstring
+    "incorrect-blank-line-before-class",   # incorrect-blank-line-before-class
+    "invalid-class-name",   # invalid-class-name
+    "invalid-function-name",   # invalid-function-name
+    "invalid-argument-name",   # invalid-argument-name
+    "non-lowercase-variable-in-function",   # invalid-variable-name
+    "f-string",
+    "import-outside-top-level", # import-outside-toplevel
+    "len-test", # use-implicit-booleaness-not-len
+    "too-many-branches", # too-many-branches
+    "too-many-arguments", # too-many-arguments
+    "too-many-locals", # too-many-locals
+    "too-many-statements", # too-many-statements
+    "magic-value-comparison", # magic-value-comparison
+    "multi-line-summary-second-line", # multi-line-summary-second-line
+    "redefined-loop-name", # redefined-loop-name
+    "self-assigning-variable", # self-assigning-variable
+    "redeclared-assigned-name", # redeclared-assigned-name
+    "assert-on-string-literal", # assert-on-string-literal
+    "cached-instance-method",
+    "any-type", # any-type
+    "assert",
+    "no-self-use", # no-self-use
+    "compare-to-empty-string", # compare-to-empty-string
+    "docstring-missing-returns", # docstring-missing-returns
+    "docstring-missing-exception", # docstring-missing-exception
+    "missing-trailing-comma", # missing-trailing-comma
+    "typing-only-first-party-import", # typing-only-first-party-import
+    "typing-only-third-party-import", # typing-only-third-party-import
+    "typing-only-standard-library-import", # typing-only-standard-library-import
+    "reimplemented-starmap", # reimplemented-starmap: less efficient than comprehensions https://github.com/astral-sh/ruff/issues/7771
 ]
 
 [tool.ruff.format]
