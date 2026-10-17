@@ -1,4 +1,6 @@
+#!/usr/bin/env python3
 # Copyright SUSE LLC
+# ruff: file-ignore[line-too-long]
 
 """check_last_signed_commit checks out a verified git commit to be used mainly in CI pipelines.
 
@@ -68,7 +70,7 @@ class GitLabGPGKeyFetcher:
         gpg_key = None
         if uid is not None:
             try:
-                response = requests.get(  # noqa: S113 request-without-timeout
+                response = requests.get(  # ruff: ignore[request-without-timeout]
                     url=self.user_api_url + str(uid) + "/gpg_keys", headers={"PRIVATE-TOKEN": self.private_token}
                 )
                 response.raise_for_status()
@@ -127,7 +129,6 @@ class GitLabGPGKeyFetcher:
 
 
 class GitRepoVerifier:
-    # ruff: noqa: E501
     """Checking out verified commit class functionalities to check GPG commit signature before checking out the git commit.
 
     Parameters
@@ -155,7 +156,7 @@ class GitRepoVerifier:
                 logger.exception("An error occurred")
         return dir_path
 
-    def init_or_load_repo(self) -> None:
+    def init_or_load_repo(self) -> git.Repo:
         """Initialize a new repo or loads an existing one."""
         path = str(self.path_to_checkout_dir) + "/.git"
         if not Path(path).exists() or not Path(path).is_dir():
@@ -165,12 +166,14 @@ class GitRepoVerifier:
                 sys.exit(err_msg)
 
             logger.info("Initializing repo...")
-            self.repo_instance = git.Repo.init(self.path_to_checkout_dir, initial_branch="main")
-            self.repo_instance.create_remote("origin", url=self.repository_url, tags=False)
-            self.repo_instance.config_writer().set_value('gpg "ssh"', "allowedSignersFile", "/dev/null").release()
+            repo = git.Repo.init(self.path_to_checkout_dir, initial_branch="main")
+            repo.create_remote("origin", url=self.repository_url, tags=False)
+            repo.config_writer().set_value('gpg "ssh"', "allowedSignersFile", "/dev/null").release()
         else:
             logger.info("Using existing repo at path: %s", path)
-            self.repo_instance = git.Repo(path)
+            repo = git.Repo(path)
+        self.repo_instance = repo
+        return repo
 
     def fetch_git_repo(self, depth: int = INITIAL_GIT_FETCH_DEPTH) -> str:
         """Fetch a specific depth of the remote repository and return its stderr output, or an empty string if not initialized."""
@@ -203,11 +206,15 @@ class GitRepoVerifier:
         logger.debug("Def Branch: %s", default_branch)
         return default_branch
 
-    def get_commiter_email(self, git_branch: str | None = None) -> list:
+    def get_commiter_email(self, git_branch: str | None = None) -> list[str]:
         """Get unique committer emails for a given branch ref, filtered by 'suse' committer."""
         ref_name = f"origin/{git_branch or self.get_default_remote_branch()}"
         if self.repo_instance:
-            emails = {commit.committer.email for commit in self.repo_instance.iter_commits(ref_name, committer="suse")}
+            emails = {
+                commit.committer.email
+                for commit in self.repo_instance.iter_commits(ref_name, committer="suse")
+                if commit.committer.email
+            }
             return sorted(emails)
         return []
 
@@ -251,7 +258,7 @@ def main(argv: list[str] | None = None) -> None:
 
     git_repo = GitRepoVerifier(args.target_dir, args.url)
     git_repo.create_checkout_dir()
-    git_repo.init_or_load_repo()
+    repo = git_repo.init_or_load_repo()
 
     default_remote_branch = git_repo.get_default_remote_branch()
     logger.info("Default Branch: %s", default_remote_branch)
@@ -283,7 +290,7 @@ def main(argv: list[str] | None = None) -> None:
             )
             if signed_commit_sha:
                 logger.info("Got Signed Commit SHA: %s", signed_commit_sha)
-                git_repo.repo_instance.git.checkout(signed_commit_sha)
+                repo.git.checkout(signed_commit_sha)
                 return
 
         git_fetch_depth = min(git_fetch_depth * 2, GIT_FETCH_DEPTH_LIMIT)
