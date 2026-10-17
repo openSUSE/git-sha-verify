@@ -1,4 +1,6 @@
+#!/usr/bin/env python3
 # Copyright SUSE LLC
+# ruff: file-ignore[line-too-long]
 
 """check_last_signed_commit checks out a verified git commit to be used mainly in CI pipelines.
 
@@ -68,7 +70,7 @@ class GitLabGPGKeyFetcher:
         gpg_key = None
         if uid is not None:
             try:
-                response = requests.get(  # noqa: S113 request-without-timeout
+                response = requests.get(  # ruff: ignore[request-without-timeout]
                     url=self.user_api_url + str(uid) + "/gpg_keys", headers={"PRIVATE-TOKEN": self.private_token}
                 )
                 response.raise_for_status()
@@ -127,7 +129,6 @@ class GitLabGPGKeyFetcher:
 
 
 class GitRepoVerifier:
-    # ruff: noqa: E501
     """Checking out verified commit class functionalities to check GPG commit signature before checking out the git commit.
 
     Parameters
