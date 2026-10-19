@@ -1,6 +1,7 @@
 # Copyright SUSE LLC
 import pathlib
 import unittest
+from typing import Any
 from unittest.mock import ANY, MagicMock, Mock, patch
 
 import pytest
@@ -333,7 +334,7 @@ class Tests(unittest.TestCase):
     ) -> None:
         self.monkey_patch.setenv("PRIVATE_TOKEN", "fake_token")
 
-        scenarios = [
+        scenarios: list[dict[str, Any]] = [
             # Case 1: No new commits found
             {
                 "fetch_repo_ret": "remote: Total 0 ",
@@ -413,6 +414,7 @@ class Tests(unittest.TestCase):
                 mock_checker.get_signed_commit_sha.return_value = s["signed_commit"]
 
             mock_checker_class.return_value = mock_checker
+            mock_checker.init_or_load_repo.return_value = mock_checker.repo_instance
 
             mock_fetcher = MagicMock()
             if s["uids"] and isinstance(s["uids"][0], list):

@@ -3,7 +3,7 @@ name = "git-sha-verify"
 dynamic = ["version"]
 description = "simple utility to verify and checkout trusted git commits signed using GPG key."
 readme = "Readme.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = "MIT"
 authors = [
     { name = "SUSE LLC" },
@@ -24,13 +24,13 @@ Homepage = "https://github.com/openSUSE/git-sha-verify"
 
 [dependency-groups]
 dev = [
-    "pyright",
-    "pytest",
-    "pytest-cov",
-    "coverage",
-    "radon",
-    "ruff",
-    "vulture",
+    "pytest==9.0.1",
+    "pytest-cov==7.0.0",
+    "coverage==7.12.0",
+    "radon==6.0.1",
+    "ruff==0.16.10",
+    "vulture==2.14",
+    "ty==0.0.72",
 ]
 
 [tool.coverage.run]
@@ -168,8 +168,5 @@ docstring-code-format = true
 author = "SUSE LLC"
 notice-rgx = "Copyright"
 
-[tool.pyright]
-include = ["tests", "*.py"]
-reportOptionalMemberAccess = false
-reportCallIssue = false
-reportArgumentType = false
+[tool.ty.terminal]
+error-on-warning = true
