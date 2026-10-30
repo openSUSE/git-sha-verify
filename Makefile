@@ -10,7 +10,7 @@ all: help
 
 .PHONY: only-test
 only-test: ## Run unit tests without coverage or style checks
-	python3 -m pytest
+	$(PYTHON_RUN) python3 -m pytest
 
 .PHONY: ruff
 ruff: ## Run ruff linting and formatting checks
@@ -42,7 +42,7 @@ check-code-health: ## Find dead code with vulture
 
 .PHONY: only-test-with-coverage
 only-test-with-coverage: ## Run unit tests with coverage report
-	python3 -m pytest -v --cov --cov-report=xml --cov-report=term-missing
+	$(PYTHON_RUN) python3 -m pytest -v --cov --cov-report=term-missing
 
 # aggregate targets
 
