@@ -17,6 +17,12 @@ help: ## Display this help
 .PHONY: all
 all: help
 
+SYSTEM_PYTHON ?= /usr/bin/python3
+
+.PHONY: check-system-runtime
+check-system-runtime: ## Verify the CLI starts with the system interpreter and distribution packages, no venv
+	$(SYSTEM_PYTHON) ./checkout-latest-signed-commit --help >/dev/null
+
 .PHONY: only-test
 only-test: ## Run unit tests without coverage or style checks
 	$(PYTHON_RUN) python3 -m pytest

@@ -29,6 +29,23 @@ git log --show-signatures
 
 Signatures can be checked via `git log --show-signature`.
 
+### Running with openSUSE system packages
+
+`checkout-latest-signed-commit` runs with the system Python interpreter and needs no virtual environment:
+
+```
+zypper install git-core gpg2 python3-GitPython python3-requests python3-python-gnupg
+```
+
+Options:
+* `PRIVATE_TOKEN`: GitLab token with `read_api` scope, required to fetch user keys from GitLab unless `-n` is given.
+* `-k/--key-types {ssh,gpg}`: signature types to accept, repeatable. Defaults to `ssh`.
+* `-n/--no-key-sync`: skip syncing keys from GitLab, implies `-p`, conflicts with `-c`.
+
+```
+PRIVATE_TOKEN=<token> ./checkout-latest-signed-commit -t /path/to/checkout -u https://github.com/openSUSE/git-sha-verify.git -k ssh gpg
+```
+
 ## Contribute
 
 This project lives in https://github.com/openSUSE/git-sha-verify
