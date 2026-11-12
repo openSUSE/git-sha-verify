@@ -34,8 +34,10 @@ Signatures can be checked via `git log --show-signature`.
 `checkout-latest-signed-commit` runs with the system Python interpreter and needs no virtual environment:
 
 ```
-zypper install git-core gpg2 python3-GitPython python3-requests python3-python-gnupg
+zypper install git-core gpg2 openssh-clients python3-GitPython python3-requests python3-python-gnupg
 ```
+
+The same packages are installed by `container/Containerfile`.
 
 Options:
 * `PRIVATE_TOKEN`: GitLab token with `read_api` scope, required to fetch user keys from GitLab unless `-n` is given.
