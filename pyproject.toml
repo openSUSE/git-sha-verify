@@ -2,7 +2,7 @@
 name = "git-sha-verify"
 dynamic = ["version"]
 description = "simple utility to verify and checkout trusted git commits signed using GPG key."
-readme = "Readme.md"
+readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [
@@ -63,7 +63,7 @@ preview = true
 # D: pydocstyle (for D100, D101, etc.)
 # Q: flake8-quotes (for Q000)
 # PL: Pylint
-extend-select =[
+extend-select = [
     "E", "F", "D", "Q", "PL",
     "debugger", # https://docs.astral.sh/ruff/rules/#flake8-debugger-t10
     "T2", # https://docs.astral.sh/ruff/rules/#flake8-print-t20
