@@ -48,6 +48,12 @@ Options:
 PRIVATE_TOKEN=<token> ./checkout-latest-signed-commit -t /path/to/checkout -u https://github.com/openSUSE/git-sha-verify.git
 ```
 
+### Filtered mirror
+
+A filtered mirror of this repository only admits commits up to the newest one whose signature verifies against the keys configured for that mirror. The `.gitlab-ci.yml` in this repository defines the mirror job: it runs the checkout script against GitHub and pushes the result fast-forward only. The image is pinned by digest in `.gitlab-ci.yml` and built from `container/Containerfile`.
+
+Commits are admitted by signature alone. Sign-off commits (`chore: sign current state after <sha>`) are an exception: use them only when a deliberate block of unsigned or web-flow commits must be admitted into the checkout, never as a routine step.
+
 ## Contribute
 
 This project lives in https://github.com/openSUSE/git-sha-verify
