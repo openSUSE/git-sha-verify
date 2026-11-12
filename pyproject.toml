@@ -16,7 +16,6 @@ dependencies = [
     "GitPython",
     "requests",
     "python-gnupg",
-    "pathlib",
 ]
 
 [project.urls]
