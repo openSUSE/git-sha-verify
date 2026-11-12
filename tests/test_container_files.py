@@ -34,3 +34,11 @@ def test_containerfile_installs_every_runtime_package_from_readme() -> None:
 def test_containerfile_does_not_bundle_the_checkout_script() -> None:
     containerfile = (REPO_ROOT / "container" / "Containerfile").read_text(encoding="utf-8")
     assert "checkout_last_signed_commit" not in containerfile
+
+
+def test_service_fetches_git_source_for_obs_build() -> None:
+    service = (REPO_ROOT / "container" / "_service").read_text(encoding="utf-8")
+    assert '<service name="obs_scm">' in service
+    assert '<param name="scm">git</param>' in service
+    assert re.search(r'<param name="url">https://[^<]+</param>', service)
+    assert re.search(r'<param name="revision">[^<]+</param>', service)
