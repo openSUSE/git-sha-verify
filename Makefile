@@ -1,5 +1,14 @@
 SOURCE_FILES ?= $(shell git ls-files "**.py")
+
+# Run tools through the locked uv environment by default; fall back to distribution packages on PATH
+# if uv is missing or cannot be called. Override, e.g. PYTHON_RUN="" to skip uv.
+UV_AVAILABLE := $(shell uv --version >/dev/null 2>&1 && echo 1)
+ifeq ($(UV_AVAILABLE),1)
+PYTHON_RUN ?= uv run --locked
+else
+$(warning uv not found or not callable; falling back to distribution-installed packages, versions may differ from uv.lock)
 PYTHON_RUN ?=
+endif
 
 .PHONY: help
 help: ## Display this help
@@ -33,12 +42,12 @@ check-lock: ## Verify uv.lock is in sync with pyproject.toml
 .PHONY: check-maintainability
 check-maintainability: ## Enforce Radon maintainability grade
 	@echo "Checking maintainability (grade B or worse) …"
-	@radon mi ${SOURCE_FILES} -n B | (! grep ".")
+	@$(PYTHON_RUN) radon mi ${SOURCE_FILES} -n B | (! grep ".")
 
 .PHONY: check-code-health
 check-code-health: ## Find dead code with vulture
 	@echo "Checking code health…"
-	@vulture ${SOURCE_FILES} --min-confidence 80
+	@$(PYTHON_RUN) vulture ${SOURCE_FILES} --min-confidence 80
 
 .PHONY: only-test-with-coverage
 only-test-with-coverage: ## Run unit tests with coverage report

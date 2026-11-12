@@ -51,13 +51,13 @@ for consideration or create an issue with a code change proposal.
 
 ### Local testing
 
-Ensure you have the dependencies for development installed. The easiest
-way to install dependencies and run tests is with uv:
+Ensure you have the dependencies for development installed. When `uv` is
+installed, `make test`, `make checkstyle`, and `make tidy` automatically
+execute tools through the locked environment (`uv run --locked`),
+guaranteeing pinned versions of ruff and other developer dependencies.
 
-    uv run make test
-
-Alternatively if you are in an environment already providing all necessary
-dependencies run `make test` or `pytest` to execute Python-based unit tests.
+Alternatively if you are in an environment without `uv`, `make` targets
+fall back to tools on `$PATH` (override with `PYTHON_RUN=""` to force).
 
 Run `make checkstyle` to check coding style and `make tidy` for automated
 formatting.
