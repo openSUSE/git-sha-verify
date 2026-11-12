@@ -1,0 +1,23 @@
+# Mirror job of qe/git-sha-verify-filtered. The checkout script comes from the filtered repository itself,
+# so newly fetched upstream code never verifies itself. Pushes are fast-forward only, never forced.
+mirror:
+  image: registry.opensuse.org/devel/opensuse/qa/git-sha-verify/containers/opensuse/git-sha-verify@sha256:4fc7e10f8e823c6fd81a888622fe0623098038319b08104325f70f0a38f7cb87
+  rules:
+    - if: '$CI_PUSH_TOKEN && ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web")'
+  variables:
+    UPSTREAM_URL: https://github.com/openSUSE/git-sha-verify.git
+  script:
+    - GSV="$(mktemp -d)/gsv"
+    - $CI_PROJECT_DIR/checkout_last_signed_commit.py -t "$GSV" -u "$UPSTREAM_URL" -c
+    - LATEST="$(git -C "$GSV" rev-parse HEAD)"
+    - |
+      if [ "$LATEST" = "$CI_COMMIT_SHA" ]; then
+        echo "filtered main already at $CI_COMMIT_SHA, nothing to do"
+        exit 0
+      fi
+    - |
+      if [ -f "$GSV/.git/shallow" ]; then
+        git -C "$GSV" fetch --unshallow
+      fi
+    - git -C "$GSV" merge-base --is-ancestor "$CI_COMMIT_SHA" "$LATEST" || { echo "$CI_COMMIT_SHA is not an ancestor of $LATEST, refusing to rewrite main"; exit 1; }
+    - git -C "$GSV" push "https://oauth2:${CI_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" HEAD:main
