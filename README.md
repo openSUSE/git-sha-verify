@@ -1,6 +1,6 @@
 # git-sha-verify
 
-[![codecov](https://codecov.io/github/openSUSE/git-sha-verify/graph/badge.svg?token=aCargeDG7M)](https://codecov.io/github/openSUSE/git-sha-verify)
+[![CI](https://github.com/openSUSE/git-sha-verify/actions/workflows/python-app.yml/badge.svg)](https://github.com/openSUSE/git-sha-verify/actions/workflows/python-app.yml)
 
 A simple utility to verify and check out trusted git commits signed using SSH/GPG key.  
 This tool helps ensure that only authorized or validated commit hashes are checked out from a git repository, supporting better code integrity and security within the workflow.

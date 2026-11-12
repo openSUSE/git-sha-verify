@@ -8,8 +8,8 @@ pull_request_rules:
           - "#check-failure=0"
           - "#check-pending=0"
           - linear-history
-          - check-success=codecov/project
-          - check-success=codecov/patch
+          # Matches workflow job id 'test' in .github/workflows/python-app.yml
+          - check-success=test
       - and:
           - "#approved-reviews-by>=2"
           - "#changes-requested-reviews-by=0"

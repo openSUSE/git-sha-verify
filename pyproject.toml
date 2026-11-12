@@ -35,6 +35,12 @@ dev = [
 
 [tool.coverage.run]
 branch = true
+source = ["."]
+omit = [
+    ".venv/*",
+    "venv/*",
+    "build/*",
+]
 
 [tool.coverage.report]
 fail_under = 100
