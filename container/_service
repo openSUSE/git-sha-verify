@@ -1,0 +1,15 @@
+<services>
+  <service name="obs_scm">
+    <param name="url">https://github.com/okurz/git-sha-verify</param>
+    <param name="scm">git</param>
+    <param name="revision">feature/006_poo179515_on_premise_filtered_git_sha_verify</param>
+    <param name="versionprefix">1</param>
+    <param name="versionformat">%ct.%h</param>
+    <param name="subdir">container</param>
+    <param name="extract">Dockerfile</param>
+    <param name="changesgenerate">enable</param>
+    <param name="changesauthor">okurz@suse.de</param>
+  </service>
+  <service name="kiwi_metainfo_helper" mode="buildtime"/>
+  <service name="docker_label_helper" mode="buildtime"/>
+</services>
