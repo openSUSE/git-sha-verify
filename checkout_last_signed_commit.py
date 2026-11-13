@@ -251,8 +251,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--key-types",
         nargs="+",
         choices=["ssh", "gpg"],
-        default=["ssh"],
-        help="Key type to use. Both can be specified in parallel. Defaults to ssh.",
+        default=["ssh", "gpg"],
+        help="Key type to use. Both can be specified in parallel. Defaults to ssh and gpg.",
     )
     parser.add_argument(
         "-c",

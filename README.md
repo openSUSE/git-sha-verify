@@ -39,11 +39,11 @@ zypper install git-core gpg2 python3-GitPython python3-requests python3-python-g
 
 Options:
 * `PRIVATE_TOKEN`: GitLab token with `read_api` scope, required to fetch user keys from GitLab unless `-n` is given.
-* `-k/--key-types {ssh,gpg}`: signature types to accept, repeatable. Defaults to `ssh`.
+* `-k/--key-types {ssh,gpg}`: signature types to accept, repeatable. Defaults to `ssh` and `gpg`.
 * `-n/--no-key-sync`: skip syncing keys from GitLab, implies `-p`, conflicts with `-c`.
 
 ```
-PRIVATE_TOKEN=<token> ./checkout-latest-signed-commit -t /path/to/checkout -u https://github.com/openSUSE/git-sha-verify.git -k ssh gpg
+PRIVATE_TOKEN=<token> ./checkout-latest-signed-commit -t /path/to/checkout -u https://github.com/openSUSE/git-sha-verify.git
 ```
 
 ## Contribute
