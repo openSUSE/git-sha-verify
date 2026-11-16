@@ -29,7 +29,7 @@ dev = [
     "radon==6.0.1",
     "ruff==0.17.3",
     "vulture==2.14",
-    "ty==0.0.89",
+    "ty==0.0.99",
 ]
 
 [tool.coverage.run]
