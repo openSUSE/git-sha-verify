@@ -330,7 +330,7 @@ def test_git_repo_import_ssh_keys(
 @pytest.mark.parametrize(
     ("argv", "expected"),
     [
-        (["-t", "d"], ("d", None, None, ["ssh"], False, False, False, False)),
+        (["-t", "d"], ("d", None, None, ["ssh", "gpg"], False, False, False, False)),
         (
             ["-t", "d", "-u", "https://x/r.git", "-b", "f", "-k", "ssh", "gpg", "-c", "-p", "-n", "-v"],
             ("d", "https://x/r.git", "f", ["ssh", "gpg"], True, True, True, True),
@@ -421,8 +421,8 @@ def test_main_fetch_or_import_failures(
     ("argv", "exp_checkout_keys"),
     [
         (["-t", "dir", "-k", "gpg", "ssh"], ["gpg", "ssh"]),
-        (["-t", "dir"], ["ssh"]),
-        (["-t", "dir", "-n"], ["ssh"]),
+        (["-t", "dir"], ["ssh", "gpg"]),
+        (["-t", "dir", "-n"], ["ssh", "gpg"]),
     ],
 )
 def test_main_sync_and_checkout(
