@@ -1,0 +1,24 @@
+# Specify the license of the container build description (see also the LICENSE file)
+# SPDX-License-Identifier: MIT
+# Define the names/tags of the container
+#!BuildTag: opensuse/git-sha-verify:latest opensuse/git-sha-verify:%RELEASE%
+
+# hadolint ignore=DL3006
+FROM opensuse/tumbleweed
+
+# Define labels according to https://en.opensuse.org/Building_derived_containers
+# labelprefix=org.opensuse.git-sha-verify
+LABEL org.opencontainers.image.title="git-sha-verify container"
+LABEL org.opencontainers.image.description="Runtime for the git-sha-verify checkout and the filtered mirror job"
+LABEL org.opencontainers.image.version="%RELEASE%"
+LABEL org.opensuse.reference="registry.opensuse.org/opensuse/git-sha-verify:%RELEASE%"
+LABEL org.openbuildservice.disturl="%DISTURL%"
+LABEL org.opencontainers.image.created="%BUILDTIME%"
+# endlabelprefix
+
+# The checkout script is not baked in: the mirror job runs the copy from the filtered repository,
+# so the image never decides what is trusted.
+# hadolint ignore=DL3037
+RUN zypper --non-interactive install --no-recommends \
+        git-core gpg2 openssh-clients python3-GitPython python3-requests python3-python-gnupg \
+    && zypper clean --all
