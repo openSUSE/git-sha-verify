@@ -8,7 +8,7 @@ mirror:
     UPSTREAM_URL: https://github.com/openSUSE/git-sha-verify.git
   script:
     - GSV="$(mktemp -d)/gsv"
-    - $CI_PROJECT_DIR/checkout_last_signed_commit.py -t "$GSV" -u "$UPSTREAM_URL" -c
+    - $CI_PROJECT_DIR/checkout_last_signed_commit.py -t "$GSV" -u "$UPSTREAM_URL" -k ssh gpg -c
     - LATEST="$(git -C "$GSV" rev-parse HEAD)"
     - |
       if [ "$LATEST" = "$CI_COMMIT_SHA" ]; then
