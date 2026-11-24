@@ -27,7 +27,7 @@ dev = [
     "pytest-cov==7.1.0",
     "coverage==7.16.2",
     "radon==6.0.1",
-    "ruff==0.17.4",
+    "ruff==0.17.5",
     "vulture==2.16",
     "ty==0.0.104",
 ]
@@ -66,7 +66,6 @@ preview = true
 extend-select = [
     "E", "F", "D", "Q", "PL",
     "debugger", # https://docs.astral.sh/ruff/rules/#flake8-debugger-t10
-    "T2", # https://docs.astral.sh/ruff/rules/#flake8-print-t20
     "TD", # https://docs.astral.sh/ruff/rules/#flake8-todos-td
     "W",
     "I", # https://docs.astral.sh/ruff/rules/#isort-i
@@ -80,7 +79,7 @@ extend-select = [
     "ICN",
     "INP",
     "PIE",
-    "T20",
+    "T20", # https://docs.astral.sh/ruff/rules/#flake8-print-t20
     "RSE",
     "RET",
     "SLF",
